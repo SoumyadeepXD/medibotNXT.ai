@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
+
+import app
 
 from medibot.combined import predict_combined, train_combined_bundle
 from medibot.intents import train_intent_bundle, predict_intent
@@ -81,6 +84,41 @@ class MediBotSmokeTests(unittest.TestCase):
         )
         self.assertEqual(predictions[0]["kind"], "intent")
         self.assertEqual(predictions[0]["name"], "Cuts")
+
+    def test_guided_submission_drug_result_keeps_blocked_flag(self) -> None:
+        app.st.session_state.clear()
+
+        with patch("app.append_session_log"):
+            app.handle_unified_submission(
+                self.combined_bundle,
+                name="Test User",
+                age=28,
+                gender="Female",
+                query="burning acidity after spicy food",
+            )
+
+        result = app.st.session_state["last_assistant_result"]
+        self.assertFalse(result["blocked"])
+        self.assertEqual(result["route_kind"], "drug")
+        self.assertEqual(result["predictions"][0]["drug"], "Pantoprazole")
+
+    def test_guided_submission_blocks_urgent_queries(self) -> None:
+        app.st.session_state.clear()
+
+        with patch("app.append_session_log") as append_log:
+            app.handle_unified_submission(
+                self.combined_bundle,
+                name="Test User",
+                age=28,
+                gender="Female",
+                query="chest pain and difficulty breathing",
+            )
+
+        result = app.st.session_state["last_assistant_result"]
+        self.assertTrue(result["blocked"])
+        self.assertEqual(result["route_kind"], "safety")
+        self.assertEqual(result["predictions"], [])
+        self.assertTrue(append_log.call_args[0][0]["blocked_for_safety"])
 
 
 if __name__ == "__main__":

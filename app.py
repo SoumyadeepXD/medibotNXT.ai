@@ -426,7 +426,7 @@ def render_drug_result_panel(
     st.subheader("What MEDIBOT suggests")
     render_warning_messages(result["warnings"])
 
-    if result["blocked"]:
+    if result.get("blocked", False):
         st.error(
             "MEDIBOT stopped here because your words matched urgent warning signs. Please contact urgent care or emergency services instead of relying on this app."
         )
@@ -463,15 +463,48 @@ def handle_unified_submission(
     query: str,
 ) -> None:
     warnings = analyze_symptoms(query)
+    blocked = requires_urgent_care(warnings)
+    timestamp = utc_timestamp()
+    warning_summary = " | ".join(item["title"] for item in warnings)
+
+    if blocked:
+        append_session_log(
+            {
+                "timestamp": timestamp,
+                "name": name,
+                "age": age,
+                "age_group": bucket_age(age),
+                "gender": gender,
+                "symptoms": query,
+                "predicted_drug": "Urgent clinical review suggested",
+                "predicted_category": "Safety override",
+                "confidence": 0,
+                "blocked_for_safety": True,
+                "warning_summary": warning_summary,
+            }
+        )
+        st.session_state["last_assistant_result"] = {
+            "interaction_mode": "Guided help (recommended)",
+            "route_kind": "safety",
+            "blocked": True,
+            "name": name,
+            "age": age,
+            "gender": gender,
+            "symptoms": query,
+            "warnings": warnings,
+            "predictions": [],
+            "raw_predictions": [],
+            "timestamp": timestamp,
+        }
+        return
+
     predictions = predict_combined(
         unified_bundle,
         query,
         age=age,
         gender=gender,
     )
-    timestamp = utc_timestamp()
     top = predictions[0]
-    warning_summary = " | ".join(item["title"] for item in warnings)
 
     append_session_log(
         {
@@ -492,6 +525,7 @@ def handle_unified_submission(
     result: dict[str, object] = {
         "interaction_mode": "Smart Route (Recommended)",
         "route_kind": top["kind"],
+        "blocked": False,
         "name": name,
         "age": age,
         "gender": gender,
@@ -695,8 +729,12 @@ def assistant_hub_tab(bundle: dict[str, object], unified_bundle: dict[str, objec
             result = st.session_state.get("last_assistant_result")
             if result:
                 st.divider()
-                render_warning_messages(result["warnings"])
-                if result["route_kind"] == "drug":
+                if result.get("blocked", False):
+                    render_warning_messages(result["warnings"])
+                    st.error(
+                        "MEDIBOT stopped here because your words matched urgent warning signs. Please contact urgent care or emergency services instead of relying on this app."
+                    )
+                elif result["route_kind"] == "drug":
                     st.info("MEDIBOT thinks this question is best handled as a medicine-style symptom check.")
                     render_drug_result_panel(
                         result,
@@ -707,6 +745,7 @@ def assistant_hub_tab(bundle: dict[str, object], unified_bundle: dict[str, objec
                         feedback_bundle=bundle,
                     )
                 else:
+                    render_warning_messages(result["warnings"])
                     st.subheader("Gentle care guide")
                     top = result["predictions"][0]
                     st.markdown(
