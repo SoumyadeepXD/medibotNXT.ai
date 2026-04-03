@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html
+
 import joblib
 import pandas as pd
 import streamlit as st
@@ -34,7 +36,12 @@ from medibot.storage import (
 from medibot.train import train_and_persist
 
 
-st.set_page_config(page_title=APP_NAME, page_icon="💊", layout="wide")
+st.set_page_config(
+    page_title=APP_NAME,
+    page_icon="💊",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 
 @st.cache_resource(show_spinner=False)
@@ -95,6 +102,8 @@ def render_shell() -> None:
             border-right: 1px solid rgba(125, 211, 252, 0.12);
         }
         [data-baseweb="tab-list"] {
+            display: flex;
+            flex-wrap: wrap;
             gap: 0.45rem;
             background: rgba(9, 18, 33, 0.78);
             border: 1px solid rgba(125, 211, 252, 0.12);
@@ -106,6 +115,23 @@ def render_shell() -> None:
             border-radius: 14px;
             padding-left: 1rem;
             padding-right: 1rem;
+        }
+        div[data-baseweb="input"] > div,
+        div[data-baseweb="textarea"] > div,
+        div[data-baseweb="select"] > div {
+            background: rgba(10, 20, 36, 0.88);
+            border: 1px solid rgba(125, 211, 252, 0.14);
+            border-radius: 16px;
+        }
+        div[data-baseweb="input"] input,
+        div[data-baseweb="textarea"] textarea {
+            color: #eff6ff;
+        }
+        [data-testid="metric-container"] {
+            background: rgba(11, 22, 38, 0.82);
+            border: 1px solid rgba(125, 211, 252, 0.12);
+            border-radius: 18px;
+            padding: 0.85rem 1rem;
         }
         [aria-selected="true"][data-baseweb="tab"] {
             background: linear-gradient(135deg, rgba(61, 137, 255, 0.18), rgba(24, 205, 170, 0.18));
@@ -122,71 +148,68 @@ def render_shell() -> None:
             border-color: rgba(125, 211, 252, 0.38);
             background: linear-gradient(135deg, #17345c, #14566a);
         }
-        .hero-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             gap: 1rem;
-            margin-top: 1.25rem;
-        }
-        .hero {
-            padding: 2.1rem 2.2rem;
-            border-radius: 30px;
+            padding: 0.95rem 1.1rem;
+            border-radius: 24px;
             background:
                 radial-gradient(circle at top right, rgba(125, 211, 252, 0.16), transparent 24%),
-                linear-gradient(135deg, rgba(12, 22, 40, 0.95), rgba(14, 28, 49, 0.92));
+                linear-gradient(135deg, rgba(11, 22, 40, 0.96), rgba(12, 27, 47, 0.92));
             color: #eff6ff;
             border: 1px solid rgba(125, 211, 252, 0.12);
             box-shadow: 0 24px 60px rgba(2, 6, 23, 0.4);
-            margin-bottom: 1.1rem;
+            margin-bottom: 0.85rem;
+            backdrop-filter: blur(18px);
         }
-        .hero-badge {
+        .topbar-badge {
             display: inline-block;
-            padding: 0.35rem 0.8rem;
+            padding: 0.28rem 0.72rem;
             border-radius: 999px;
             background: rgba(125, 211, 252, 0.12);
             letter-spacing: 0.08em;
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            margin-bottom: 0.9rem;
+            margin-bottom: 0.45rem;
             color: #bde9ff;
         }
-        .hero h1 {
+        .topbar-title {
             margin: 0;
             font-family: "Avenir Next", "Trebuchet MS", sans-serif;
-            font-size: 2.9rem;
+            font-size: 1.18rem;
+            font-weight: 800;
             letter-spacing: 0.02em;
         }
-        .hero p {
-            margin-top: 0.65rem;
+        .topbar-copy {
+            margin-top: 0.22rem;
             margin-bottom: 0;
-            line-height: 1.75;
-            max-width: 800px;
-            font-size: 1.03rem;
-            color: #d9e7f7;
+            line-height: 1.45;
+            max-width: 580px;
+            font-size: 0.9rem;
+            color: #adc3d8;
         }
-        .soft-card {
-            background: rgba(15, 25, 43, 0.78);
+        .topbar-rail {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            justify-content: flex-end;
+        }
+        .topbar-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.48rem 0.78rem;
+            border-radius: 999px;
+            background: rgba(18, 31, 53, 0.84);
             border: 1px solid rgba(125, 211, 252, 0.12);
-            border-radius: 22px;
-            padding: 1rem 1.05rem;
-            color: #dce8f7;
+            color: #ebf5ff;
+            font-size: 0.86rem;
+            white-space: nowrap;
         }
-        .soft-card-title {
-            font-weight: 800;
-            color: #f8fbff;
-            margin-bottom: 0.35rem;
-        }
-        .soft-card-text {
-            color: #b8c8da;
-            line-height: 1.6;
-            font-size: 0.94rem;
-        }
-        .danger-card {
-            background: linear-gradient(135deg, rgba(91, 33, 41, 0.85), rgba(73, 23, 31, 0.75));
-            border: 1px solid rgba(251, 113, 133, 0.25);
-            border-radius: 22px;
-            padding: 1rem 1.1rem;
-            margin-top: 1rem;
+        .topbar-pill.alert {
+            background: rgba(73, 23, 31, 0.58);
+            border-color: rgba(251, 113, 133, 0.2);
             color: #ffe4e8;
         }
         .result-card {
@@ -237,12 +260,129 @@ def render_shell() -> None:
             background: rgba(12, 23, 39, 0.82);
             border: 1px solid rgba(125, 211, 252, 0.1);
             border-radius: 18px;
-            padding: 1rem 1.05rem;
+            padding: 0.95rem 1rem;
             color: #d9e7f7;
         }
+        .example-cloud {
+            background: rgba(12, 23, 39, 0.82);
+            border: 1px solid rgba(125, 211, 252, 0.1);
+            border-radius: 20px;
+            padding: 1rem;
+            color: #d9e7f7;
+        }
+        .example-title {
+            font-weight: 800;
+            color: #f8fbff;
+            margin-bottom: 0.2rem;
+        }
+        .example-note {
+            color: #9fb4c9;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 0.8rem;
+        }
+        .example-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+        }
+        .example-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.52rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid rgba(125, 211, 252, 0.12);
+            background: rgba(18, 31, 53, 0.86);
+            color: #e9f4ff;
+            font-size: 0.9rem;
+            line-height: 1.35;
+        }
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.85rem;
+            margin-top: 0.9rem;
+        }
+        .guide-card {
+            background: rgba(12, 23, 39, 0.84);
+            border: 1px solid rgba(125, 211, 252, 0.1);
+            border-radius: 20px;
+            padding: 1rem;
+            color: #d9e7f7;
+        }
+        .guide-step {
+            color: #7dd3fc;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+        .guide-title {
+            color: #f8fbff;
+            font-weight: 800;
+            margin-bottom: 0.3rem;
+        }
+        .guide-text {
+            color: #a9bdd1;
+            font-size: 0.93rem;
+            line-height: 1.55;
+        }
         @media (max-width: 900px) {
-            .hero-grid {
+            .block-container {
+                padding-top: 1rem;
+                padding-bottom: 2rem;
+            }
+            .guide-grid {
                 grid-template-columns: 1fr;
+            }
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .topbar-rail {
+                justify-content: flex-start;
+            }
+            [data-baseweb="tab"] {
+                flex: 1 1 calc(50% - 0.45rem);
+                min-width: 0;
+                justify-content: center;
+                text-align: center;
+            }
+        }
+        @media (max-width: 640px) {
+            .block-container {
+                padding-top: 0.75rem;
+                padding-left: 0.85rem;
+                padding-right: 0.85rem;
+            }
+            .topbar {
+                padding: 0.85rem 0.9rem;
+                border-radius: 22px;
+            }
+            .topbar-title {
+                font-size: 1.02rem;
+            }
+            .result-card {
+                padding: 1rem;
+                border-radius: 20px;
+            }
+            .result-drug {
+                font-size: 1.55rem;
+            }
+            .mini-card,
+            .plain-note,
+            .example-cloud,
+            .guide-card {
+                border-radius: 16px;
+                padding: 0.9rem;
+            }
+            .example-pill {
+                width: 100%;
+                justify-content: center;
+            }
+            .topbar-pill {
+                white-space: normal;
             }
         }
         </style>
@@ -251,28 +391,16 @@ def render_shell() -> None:
     )
     st.markdown(
         f"""
-        <section class="hero">
-            <div class="hero-badge">CALM, EVERYDAY HEALTH SUPPORT</div>
-            <h1>{APP_NAME}</h1>
-            <p>{APP_SUBTITLE} Use simple words like you would with a caring friend. MEDIBOT can guide everyday symptom questions,
-            suggest common medicine matches, and share basic care advice while clearly warning when something needs real medical help.</p>
-            <div class="hero-grid">
-                <div class="soft-card">
-                    <div class="soft-card-title">1. Tell MEDIBOT what is going on</div>
-                    <div class="soft-card-text">Short plain sentences are enough. Example: “my throat hurts and I keep coughing at night”.</div>
-                </div>
-                <div class="soft-card">
-                    <div class="soft-card-title">2. Get gentle guidance</div>
-                    <div class="soft-card-text">You will see either a medicine-style suggestion, a simple care guide, or a warning to get real medical help.</div>
-                </div>
-                <div class="soft-card">
-                    <div class="soft-card-title">3. Use it as support, not a diagnosis</div>
-                    <div class="soft-card-text">This tool is for learning and light guidance. It should never replace a doctor, pharmacist, or emergency care.</div>
-                </div>
+        <section class="topbar">
+            <div>
+                <div class="topbar-badge">{APP_NAME}</div>
+                <div class="topbar-title">Fast everyday health guidance</div>
+                <p class="topbar-copy">{APP_SUBTITLE}</p>
             </div>
-            <div class="danger-card">
-                <strong>Get urgent help now</strong><br/>
-                Chest pain, breathing trouble, fainting, confusion, bleeding, or swelling of the lips/tongue should be treated as urgent.
+            <div class="topbar-rail">
+                <div class="topbar-pill">Open Get Help to start</div>
+                <div class="topbar-pill">How To Use tab for a quick tour</div>
+                <div class="topbar-pill alert">Urgent symptoms: skip the app and get real care</div>
             </div>
         </section>
         """,
@@ -282,27 +410,17 @@ def render_shell() -> None:
 
 def render_sidebar(bundle: dict[str, object]) -> None:
     metrics = bundle["metrics"]
-    st.sidebar.title("Start Here")
-    st.sidebar.caption("A calm place to ask simple health questions.")
-    st.sidebar.markdown(
-        """
-        - Use everyday language.
-        - Include your age if you can.
-        - If something feels severe or frightening, skip the app and get real medical help.
-        """
-    )
+    st.sidebar.title("MEDIBOT")
+    st.sidebar.caption("Everyday guidance in simple language.")
     st.sidebar.warning(
         "Urgent signs: chest pain, trouble breathing, fainting, heavy bleeding, confusion, or swelling of the lips/tongue."
     )
-    st.sidebar.info(
-        "MEDIBOT does not prescribe medicine or diagnose disease. It gives light guidance only."
-    )
+    st.sidebar.caption("MEDIBOT is educational only. For severe or frightening symptoms, get real medical help.")
 
     first_aid_bundle = load_first_aid_bundle()
     unified_bundle = load_unified_bundle()
 
-    with st.sidebar.expander("Project owner tools"):
-        st.caption("These controls are mainly for the project owner or evaluator.")
+    with st.sidebar.expander("Owner tools"):
         st.metric("Medicine model accuracy", f"{metrics['accuracy']:.0%}")
         st.metric("Medicine examples", int(bundle["dataset_size"]))
         st.metric("Saved feedback rows", int(bundle["feedback_rows"]))
@@ -328,6 +446,24 @@ def confidence_phrase(score: float) -> str:
     if score >= 0.45:
         return "possible match"
     return "low-confidence match"
+
+
+def render_example_cloud(title: str, examples: list[str], *, note: str | None = None) -> None:
+    note_html = f'<div class="example-note">{html.escape(note)}</div>' if note else ""
+    pills = "".join(
+        f'<div class="example-pill">{html.escape(example)}</div>'
+        for example in examples
+    )
+    st.markdown(
+        f"""
+        <div class="example-cloud">
+            <div class="example-title">{html.escape(title)}</div>
+            {note_html}
+            <div class="example-wrap">{pills}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_result_card(result: dict[str, object]) -> None:
@@ -657,7 +793,7 @@ def handle_prediction_submission(bundle: dict[str, object], *, name: str, age: i
 def assistant_hub_tab(bundle: dict[str, object], unified_bundle: dict[str, object] | None) -> None:
     st.subheader("Get Help")
     st.caption(
-        "Start with the guided mode if you are unsure. It can decide whether your message fits a simple care guide or a medicine-oriented suggestion."
+        "Start with guided help if you are unsure. It can choose between a simple care guide and a medicine-style suggestion."
     )
 
     modes = ["Guided help (recommended)", "Medicine suggestions only"]
@@ -669,18 +805,28 @@ def assistant_hub_tab(bundle: dict[str, object], unified_bundle: dict[str, objec
         mode = st.radio(
             "How would you like MEDIBOT to help?",
             options=modes,
-            horizontal=True,
+            horizontal=False,
         )
 
         with st.form("assistant_hub_form", clear_on_submit=False):
             name = st.text_input("Your name (optional)", key="assistant_name")
-            age = st.number_input("Age", min_value=1, max_value=110, value=28, step=1, key="assistant_age")
-            gender = st.selectbox(
-                "Gender (optional, helps tailor the result a little)",
-                options=["Female", "Male", "Non-binary", "Prefer not to say"],
-                index=3,
-                key="assistant_gender",
-            )
+            age_col, gender_col = st.columns([0.42, 0.58], gap="small")
+            with age_col:
+                age = st.number_input(
+                    "Age",
+                    min_value=1,
+                    max_value=110,
+                    value=28,
+                    step=1,
+                    key="assistant_age",
+                )
+            with gender_col:
+                gender = st.selectbox(
+                    "Gender (optional)",
+                    options=["Female", "Male", "Non-binary", "Prefer not to say"],
+                    index=3,
+                    key="assistant_gender",
+                )
             query_label = (
                 "In your own words, what is going on?"
                 if mode == "Guided help (recommended)"
@@ -794,10 +940,8 @@ def assistant_hub_tab(bundle: dict[str, object], unified_bundle: dict[str, objec
         st.markdown(
             """
             <div class="plain-note">
-                <strong>What MEDIBOT does gently</strong><br/><br/>
-                1. Reads your words in plain language.<br/>
-                2. Looks for common care advice or medicine-style matches.<br/>
-                3. Shows a clear warning if your message sounds urgent.
+                <strong>Best results</strong><br/><br/>
+                Mention the main symptom, how long it has been happening, and anything that makes it better or worse.
             </div>
             """,
             unsafe_allow_html=True,
@@ -806,34 +950,24 @@ def assistant_hub_tab(bundle: dict[str, object], unified_bundle: dict[str, objec
         st.markdown(
             """
             <div class="plain-note" style="margin-top:0.9rem;">
-                <strong>Good things to include</strong><br/><br/>
-                How long it has been happening, the main symptom, and anything that makes it worse or better.
+                <strong>Skip the app and get urgent help for</strong><br/><br/>
+                Chest pain, breathing trouble, fainting, confusion, heavy bleeding, or swelling of the lips or tongue.
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.subheader("Try examples like these")
-        examples = [
+        render_example_cloud(
+            "Try prompts like these",
+            [
             "burning acidity after spicy food",
             "itchy eyes and sneezing from dust",
             "What should I do for cuts?",
             "How do I treat a sore throat?",
             "What should I do for nasal congestion?",
-        ]
-        for example in examples:
-            st.code(example, language=None)
-
-        if unified_bundle is not None:
-            with st.expander("Project owner: model details"):
-                st.markdown(
-                    f"""
-                    - Guided model accuracy: `{unified_bundle['metrics']['accuracy']:.0%}`
-                    - Medicine model accuracy: `{bundle['metrics']['accuracy']:.0%}`
-                    - Guided model classes: `{unified_bundle['metrics']['class_count']}`
-                    - Medicine classes: `{bundle['metrics']['class_count']}`
-                    """
-                )
+            ],
+            note="Use your own wording. Short sentences are enough.",
+        )
 
 
 def advisor_tab(bundle: dict[str, object]) -> None:
@@ -956,7 +1090,7 @@ def advisor_tab(bundle: dict[str, object]) -> None:
 
 def learning_tab() -> None:
     st.subheader("Recent Visits")
-    st.caption("These entries are saved locally on this device to help the demo keep a simple history.")
+    st.caption("Saved locally on this device.")
 
     recent_sessions = load_recent_sessions(limit=10)
     if recent_sessions.empty:
@@ -1114,7 +1248,7 @@ def assistant_tab(first_aid_bundle: dict[str, object] | None) -> None:
         return
 
     st.caption(
-        "Use this page when you want simple care guidance for common issues like cuts, fever, sprains, sore throat, or congestion."
+        "Use this page for simple care guidance on common everyday problems."
     )
 
     left, right = st.columns([1.1, 0.9], gap="large")
@@ -1172,32 +1306,68 @@ def assistant_tab(first_aid_bundle: dict[str, object] | None) -> None:
             """
             <div class="plain-note">
                 <strong>Best for</strong><br/><br/>
-                Cuts, sore throat, cough, fever, sprains, congestion, and other common day-to-day care questions.
+                Cuts, sore throat, cough, fever, sprains, congestion, and similar everyday care questions.
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.subheader("You can ask things like")
-        examples = [
-            "What should I do for cuts?",
-            "How do I treat a sore throat?",
-            "What to do for nasal congestion?",
-            "How to cure fever?",
-            "What should I do for sprains?",
-        ]
-        for example in examples:
-            st.code(example, language=None)
+        render_example_cloud(
+            "You can ask things like",
+            [
+                "What should I do for cuts?",
+                "How do I treat a sore throat?",
+                "What to do for nasal congestion?",
+                "How to cure fever?",
+                "What should I do for sprains?",
+            ],
+            note="Simple, direct questions work best here.",
+        )
 
-        with st.expander("Project owner: care guide model details"):
-            metrics = first_aid_bundle["metrics"]
-            st.markdown(
-                f"""
-                - Dataset patterns: `{metrics['dataset_size']}`
-                - Intent tags: `{metrics['class_count']}`
-                - Validation accuracy: `{metrics['accuracy']:.0%}`
-                - Macro F1: `{metrics['macro_f1']:.0%}`
-                """
-            )
+
+def how_to_use_tab() -> None:
+    st.subheader("How To Use")
+    st.caption("A quick tour so you can start in a few seconds.")
+    st.markdown(
+        """
+        <div class="guide-grid">
+            <div class="guide-card">
+                <div class="guide-step">Step 1</div>
+                <div class="guide-title">Choose a mode</div>
+                <div class="guide-text">Use guided help if you are unsure. Choose medicine suggestions only if you already want a symptom-based medicine match.</div>
+            </div>
+            <div class="guide-card">
+                <div class="guide-step">Step 2</div>
+                <div class="guide-title">Describe what is happening</div>
+                <div class="guide-text">Write in simple language. Include the main symptom, how long it has been happening, and anything that makes it better or worse.</div>
+            </div>
+            <div class="guide-card">
+                <div class="guide-step">Step 3</div>
+                <div class="guide-title">Read the result calmly</div>
+                <div class="guide-text">MEDIBOT may show a care guide, a medicine-style match, or an urgent warning telling you to seek real medical help.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    render_example_cloud(
+        "Good first prompts",
+        [
+            "my throat hurts and I keep coughing at night",
+            "burning acidity after spicy food",
+            "itchy eyes and sneezing from dust",
+            "What should I do for a cut?",
+        ],
+        note="Short natural sentences work best.",
+    )
+    st.markdown(
+        """
+        <div class="plain-note" style="margin-top:0.9rem;">
+            <strong>Go straight to urgent care for</strong><br/><br/>
+            Chest pain, breathing trouble, fainting, heavy bleeding, confusion, or swelling of the lips or tongue.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def project_tab(bundle: dict[str, object]) -> None:
@@ -1205,24 +1375,21 @@ def project_tab(bundle: dict[str, object]) -> None:
     st.subheader("About MEDIBOT")
     st.markdown(
         """
-        MEDIBOT is designed to be a gentle helper for everyday symptom questions and simple care guidance.
-
-        It can:
-        - suggest common medicine-style matches for mild symptom descriptions
-        - answer common care questions like cuts, sore throat, sprains, or congestion
-        - show safety warnings when a message sounds urgent
-        - save a simple local history on this device
-        """
+        <div class="plain-note">
+            <strong>What it does</strong><br/><br/>
+            MEDIBOT helps with everyday symptom questions, simple care guides, and clear urgent-symptom warnings.
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-
-    st.subheader("Important limits")
     st.markdown(
         """
-        - This is not a diagnosis tool.
-        - It does not replace a doctor, nurse, pharmacist, or emergency service.
-        - It works best for mild, common questions and short symptom descriptions.
-        - The safety checks are simple keyword checks, so they are helpful but not a full medical triage system.
-        """
+        <div class="plain-note" style="margin-top:0.9rem;">
+            <strong>Important limits</strong><br/><br/>
+            It is not a diagnosis tool and should not replace a doctor, nurse, pharmacist, or emergency service.
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     with st.expander("Project owner: technical details"):
@@ -1244,11 +1411,13 @@ def main() -> None:
     unified_bundle = load_unified_bundle()
     render_sidebar(bundle)
 
-    assistant, first_aid, learning, project = st.tabs(
-        ["Get Help", "Common Care Guides", "Recent Visits", "About MEDIBOT"]
+    assistant, how_to_use, first_aid, learning, project = st.tabs(
+        ["Get Help", "How To Use", "Common Care Guides", "Recent Visits", "About MEDIBOT"]
     )
     with assistant:
         assistant_hub_tab(bundle, unified_bundle)
+    with how_to_use:
+        how_to_use_tab()
     with first_aid:
         assistant_tab(first_aid_bundle)
     with learning:
